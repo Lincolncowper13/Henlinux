@@ -14,6 +14,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Config Ngrok
+        run: |
+            ngrok config add-authtoken 2pR0fPCjO8MUjY9RACaVS3xlrZE_6YkBEbjHxAmvvjhmRqFur
+
       - name: Remove conflicting containerd package
         run: |
           sudo apt-get remove -y containerd
