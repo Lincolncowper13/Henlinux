@@ -1,13 +1,15 @@
-FROM almalinux:latest
+FROM ubuntu:latest
+
 ENV DEBIAN_FRONTEND=noninteractive
-RUN yum -y update && \
-    yum -y install \
+
+RUN apt-get update && \
+    apt-get -y install \
     curl \
     vim \
     wget \
     nano \
-    iproute \
-    iputils \
+    iproute2 \
+    iputils-ping \
     sudo \
     net-tools \
     tar \
@@ -15,15 +17,22 @@ RUN yum -y update && \
     unzip \
     git \
     gnupg \
-    && yum clean all
+    && apt-get clean
+
 RUN curl -s https://ngrok.com/download | tar -xzv && \
     mv ngrok /usr/local/bin/ngrok
+
 RUN useradd -m henuser && echo "henuser:password" | chpasswd && \
-    usermod -aG wheel henuser
-RUN echo "HOSTNAME=henlinux.local" >> /etc/sysconfig/network && \
+    usermod -aG sudo henuser
+
+RUN echo "HOSTNAME=henlinux.local" >> /etc/hostname && \
     hostnamectl set-hostname henlinux.local
+
 RUN echo "henuser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/henuser
-RUN yum -y install openssh-server && \
-    systemctl enable sshd
+
+RUN apt-get -y install openssh-server && \
+    systemctl enable ssh
+
 EXPOSE 22
+
 CMD ["/usr/sbin/sshd", "-D"]
