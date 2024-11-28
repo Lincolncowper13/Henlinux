@@ -14,11 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Remove conflicting containerd package
-        run: |
-          sudo apt-get remove -y containerd
-          sudo apt-get autoremove -y
-
       - name: Install Docker
         run: |
           sudo apt-get update
@@ -38,11 +33,6 @@ jobs:
 
       - name: Check container status
         run: |
-          sudo docker ps -a
-          sudo docker logs henlinux-vps
-
-      - name: Ensure HenLinux container is running
-        run: |
           container_status=$(sudo docker inspect -f '{{.State.Running}}' henlinux-vps)
           if [ "$container_status" != "true" ]; then
             echo "HenLinux container is not running. Exiting."
@@ -50,9 +40,9 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Ngrok installation
+      - name: Debug container logs
         run: |
-          sudo docker exec henlinux-vps bash -c "command -v /usr/local/bin/ngrok || { echo 'Ngrok not found'; exit 1; }"
+          sudo docker logs henlinux-vps || echo "No logs available"
 
       - name: Start Ngrok for SSH Access with Authentication
         run: |
@@ -68,6 +58,7 @@ jobs:
           if [ -z "$ngrok_url" ]; then
             echo "Ngrok URL is empty. Checking ngrok logs."
             sudo docker logs henlinux-vps
+            exit 1
           else
             echo "Ngrok public SSH URL is: $ngrok_url"
             echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
