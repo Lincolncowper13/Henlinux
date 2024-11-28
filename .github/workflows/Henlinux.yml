@@ -11,23 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup dependencies
-      - name: Setup Build Environment
+      - name: Install Required Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap qemu-utils systemd-container
+          sudo apt-get install -y \
+            binfmt-support qemu qemu-user-static debootstrap systemd-container
 
-      # Create the base HenLinux image
       - name: Create Base HenLinux Image
         run: |
           mkdir -p henlinux-image
-          sudo debootstrap --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
+          sudo debootstrap --no-merged-usr --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
 
-      # Configure SSH Server with Root Access
+      - name: Fix Package Configuration in Chroot
+        run: |
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get update && apt-get install -f -y
+          dpkg --configure -a || true
+          "
+
+      - name: Check Debootstrap Logs
+        if: failure()
+        run: |
+          cat henlinux-image/debootstrap/debootstrap.log
+
       - name: Install and Configure OpenSSH with Root Access
         run: |
           sudo chroot henlinux-image /bin/bash -c "
@@ -39,7 +48,6 @@ jobs:
           systemctl enable ssh
           "
 
-      # Install and configure Tailscale using GitHub Secrets
       - name: Install and Configure Tailscale
         env:
           TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
@@ -52,7 +60,6 @@ jobs:
           tailscale ip -4 > /tmp/ip_henlinux.txt
           "
 
-      # Display Login Credentials and Keep HenLinux Active
       - name: Display Login Credentials and Keep Active
         run: |
           sudo chroot henlinux-image /bin/bash -c "cat /tmp/ip_henlinux.txt" > ip_henlinux.txt
@@ -65,7 +72,6 @@ jobs:
           echo "HenLinux Active"
           while :; do sleep 60; done
 
-      # Clean up the image for packaging
       - name: Clean Up Image
         run: |
           sudo chroot henlinux-image /bin/bash -c "
@@ -73,12 +79,10 @@ jobs:
           rm -rf /var/lib/apt/lists/*
           "
 
-      # Package the image into a compressed file
       - name: Package HenLinux Image
         run: |
           sudo tar -czvf henlinux-image.tar.gz -C henlinux-image .
 
-      # Upload the built image as an artifact
       - name: Upload HenLinux Image
         uses: actions/upload-artifact@v3
         with:
