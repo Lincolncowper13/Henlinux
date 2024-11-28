@@ -1,4 +1,4 @@
-name: HenLinux
+name: HenLinux VPS
 
 on:
   push:
@@ -7,61 +7,80 @@ on:
   workflow_dispatch:
 
 jobs:
-  expose:
+  build-henlinux-vps:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v3
-      
-      - name: Remove conflicting containerd package
-        run: |
-          sudo apt-get remove -y containerd
-          sudo apt-get autoremove -y
 
-      - name: Install Docker
+      # Setup dependencies
+      - name: Setup Build Environment
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
-          echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+          sudo apt-get install -y debootstrap qemu-utils systemd-container
 
-      - name: Config Ngrok
+      # Create the base HenLinux image
+      - name: Create Base HenLinux Image
         run: |
-          docker pull ngrok/ngrok
-          docker run --net=host -it -e NGROK_AUTHTOKEN=2pR0fPCjO8MUjY9RACaVS3xlrZE_6YkBEbjHxAmvvjhmRqFur ngrok/ngrok:latest http 80
+          mkdir -p henlinux-image
+          sudo debootstrap --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
 
-      - name: Build HenLinux image
+      # Configure SSH Server with Root Access
+      - name: Install and Configure OpenSSH with Root Access
         run: |
-          sudo docker build -t henlinux .
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get update && apt-get install -y openssh-server
+          mkdir -p /var/run/sshd
+          echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
+          echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+          echo 'root:Henlinux13' | chpasswd
+          systemctl enable ssh
+          "
 
-      - name: Run HenLinux container
+      # Install and configure Tailscale using GitHub Secrets
+      - name: Install and Configure Tailscale
+        env:
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         run: |
-          sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
-          
-      - name: Add ngrok authtoken
-        run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken 2pR0fPCjO8MUjY9RACaVS3xlrZE_6YkBEbjHxAmvvjhmRqFur"
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get update && apt-get install -y curl gnupg
+          curl -fsSL https://tailscale.com/install.sh | sh
+          tailscaled &
+          tailscale up --auth-key ${TAILSCALE_AUTHKEY}
+          tailscale ip -4 > /tmp/ip_henlinux.txt
+          "
 
-      - name: Start ngrok for SSH
+      # Display Login Credentials and Keep HenLinux Active
+      - name: Display Login Credentials and Keep Active
         run: |
-          sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 22"
+          sudo chroot henlinux-image /bin/bash -c "cat /tmp/ip_henlinux.txt" > ip_henlinux.txt
+          echo "========================================="
+          echo "HenLinux VPS Details:"
+          echo "Root Username: root"
+          echo "Root Password: Henlinux13"
+          echo "IP HenLinux: $(cat ip_henlinux.txt)"
+          echo "========================================="
+          echo "HenLinux Active"
+          while :; do sleep 60; done
 
-      - name: Get ngrok public SSH URL
+      # Clean up the image for packaging
+      - name: Clean Up Image
         run: |
-          sleep 5
-          ngrok_url=$(curl --silent http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url)
-          if [ -z "$ngrok_url" ]; then
-            echo "Ngrok URL is empty. Checking ngrok logs."
-            sudo docker logs henlinux-vps
-            exit 1
-          else
-            echo "Ngrok public SSH URL is: $ngrok_url"
-            echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
-          fi
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+          "
 
-      - name: Keep the process running
+      # Package the image into a compressed file
+      - name: Package HenLinux Image
         run: |
-          while true; do sleep 60; done
+          sudo tar -czvf henlinux-image.tar.gz -C henlinux-image .
+
+      # Upload the built image as an artifact
+      - name: Upload HenLinux Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: henlinux-vps
+          path: henlinux-image.tar.gz
