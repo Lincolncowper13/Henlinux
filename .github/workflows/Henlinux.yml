@@ -1,3 +1,5 @@
+V
+          fi
 name: HenLinux
 
 on:
@@ -48,13 +50,9 @@ jobs:
         run: |
           sudo docker logs henlinux-vps
 
-      - name: Save Ngrok authtoken
+      - name: Save Ngrok authtoken and Start Tunnel
         run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}"
-
-      - name: Start Ngrok TCP tunnel
-        run: |
-          sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 2222"
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken 2pR0fPCjO8MUjY9RACaVS3xlrZE_6YkBEbjHxAmvvjhmRqFur && /usr/local/bin/ngrok tcp 2222"
 
       - name: Get Ngrok public SSH URL
         run: |
