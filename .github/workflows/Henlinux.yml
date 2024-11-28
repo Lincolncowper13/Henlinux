@@ -14,14 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Add swap memory
-        run: |
-          sudo fallocate -l 2G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          free -h
-
       - name: Install Docker
         run: |
           sudo apt-get update
@@ -39,6 +31,23 @@ jobs:
         run: |
           sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
 
+      - name: Wait for container initialization
+        run: |
+          sleep 10
+
+      - name: Check if HenLinux container is running
+        run: |
+          container_status=$(sudo docker inspect -f '{{.State.Running}}' henlinux-vps || echo "false")
+          if [ "$container_status" != "true" ]; then
+            echo "HenLinux container is not running. Checking logs..."
+            sudo docker logs henlinux-vps
+            exit 1
+          fi
+
+      - name: Debug Container Logs
+        run: |
+          sudo docker logs henlinux-vps
+
       - name: Save Ngrok authtoken
         run: |
           sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}"
@@ -47,12 +56,9 @@ jobs:
         run: |
           sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 2222"
 
-      - name: Wait for Ngrok to establish the tunnel
-        run: |
-          sleep 15
-
       - name: Get Ngrok public SSH URL
         run: |
+          sleep 10
           ngrok_url=$(curl --silent http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url)
           if [ -z "$ngrok_url" ]; then
             echo "Ngrok URL is empty. Checking ngrok logs."
@@ -62,11 +68,3 @@ jobs:
             echo "Ngrok public SSH URL is: $ngrok_url"
             echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
           fi
-
-      - name: Debug Container Logs
-        run: |
-          sudo docker logs henlinux-vps || echo "No logs available"
-
-      - name: Keep the process running
-        run: |
-          while true; do sleep 60; done
