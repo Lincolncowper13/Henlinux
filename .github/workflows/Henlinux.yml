@@ -36,20 +36,27 @@ jobs:
         run: |
           sudo docker run -d --name henlinux-vps -P henlinux
 
-      - name: Check HenLinux container status
+      - name: Check container status
         run: |
           sudo docker ps -a
           sudo docker logs henlinux-vps
 
-      - name: Get SSH Port
+      - name: Ensure HenLinux container is running
         run: |
-          ssh_port=$(sudo docker inspect henlinux-vps --format='{{ (index (index .NetworkSettings.Ports "22/tcp") 0).HostPort }}')
-          echo "SSH port on host: $ssh_port"
-          echo "ssh_port=$ssh_port" >> $GITHUB_ENV
+          container_status=$(sudo docker inspect -f '{{.State.Running}}' henlinux-vps)
+          if [ "$container_status" != "true" ]; then
+            echo "HenLinux container is not running. Exiting."
+            sudo docker logs henlinux-vps
+            exit 1
+          fi
+
+      - name: Verify Ngrok installation
+        run: |
+          sudo docker exec henlinux-vps bash -c "command -v /usr/local/bin/ngrok || { echo 'Ngrok not found'; exit 1; }"
 
       - name: Start Ngrok for SSH Access with Authentication
         run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} && /usr/local/bin/ngrok tcp ${{ env.ssh_port }}"
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} && /usr/local/bin/ngrok tcp 22"
 
       - name: Wait for Ngrok to establish the tunnel
         run: |
