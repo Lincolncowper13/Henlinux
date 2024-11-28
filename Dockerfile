@@ -18,6 +18,7 @@ RUN apt-get update && \
     unzip \
     git \
     gnupg \
+    openssh-server \
     && apt-get clean
 
 # Install ngrok
@@ -27,7 +28,7 @@ RUN curl -s https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -o
     rm ngrok.zip
 
 # Create user and setup SSH
-RUN useradd -m henuser && echo "henuser:Henlinux" | chpasswd && \
+RUN useradd -m henuser && echo "henuser:password" | chpasswd && \
     usermod -aG sudo henuser
 
 # Set hostname in entrypoint to avoid "read-only" error
@@ -35,9 +36,11 @@ ENV HOSTNAME=henlinux.local
 
 RUN echo "henuser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/henuser
 
-RUN apt-get -y install openssh-server && \
-    systemctl enable ssh
+# Enable and configure SSH service
+RUN mkdir /var/run/sshd
 
+# Expose SSH port
 EXPOSE 22
 
-CMD ["bash", "-c", "echo $HOSTNAME > /etc/hostname && exec /usr/sbin/sshd -D"]
+# Start SSH and ngrok tunnel
+CMD ["bash", "-c", "echo $HOSTNAME > /etc/hostname && /usr/sbin/sshd -D & ngrok tcp 22"]
