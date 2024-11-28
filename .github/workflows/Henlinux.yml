@@ -37,9 +37,9 @@ jobs:
 
       - name: Run HenLinux container
         run: |
-          sudo docker run -d --name henlinux-vps -P henlinux
+          sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
 
-      - name: Check container status
+      - name: Check HenLinux Container Status
         run: |
           container_status=$(sudo docker inspect -f '{{.State.Running}}' henlinux-vps)
           if [ "$container_status" != "true" ]; then
@@ -54,7 +54,7 @@ jobs:
 
       - name: Start Ngrok TCP tunnel
         run: |
-          sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 22"
+          sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 2222"
 
       - name: Wait for Ngrok to establish the tunnel
         run: |
@@ -71,6 +71,10 @@ jobs:
             echo "Ngrok public SSH URL is: $ngrok_url"
             echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
           fi
+
+      - name: Debug Container Logs
+        run: |
+          sudo docker logs henlinux-vps || echo "No logs available"
 
       - name: Keep the process running
         run: |
