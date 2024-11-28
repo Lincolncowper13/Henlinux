@@ -39,15 +39,6 @@ jobs:
         run: |
           sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
 
-      - name: Check HenLinux Container Status
-        run: |
-          container_status=$(sudo docker inspect -f '{{.State.Running}}' henlinux-vps)
-          if [ "$container_status" != "true" ]; then
-            echo "HenLinux container is not running. Exiting."
-            sudo docker logs henlinux-vps
-            exit 1
-          fi
-
       - name: Save Ngrok authtoken
         run: |
           sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}"
