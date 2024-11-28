@@ -1,4 +1,4 @@
-name: Henlinux
+name: HenLinux
 
 on:
   push:
@@ -9,27 +9,44 @@ on:
 jobs:
   expose:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Remove conflicting containerd package
+        run: |
+          sudo apt-get remove -y containerd
+          sudo apt-get autoremove -y
+
       - name: Install Docker
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker.io
+          sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
+          sudo echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
       - name: Build HenLinux image
         run: |
           sudo docker build -t henlinux .
+
       - name: Run HenLinux container
         run: |
           sudo docker run -d --name henlinux-vps -p 22:22 henlinux
+
       - name: Start Ngrok for SSH Access
         run: |
           sudo docker exec -d henlinux-vps /usr/local/bin/ngrok tcp 22
+
       - name: Get Ngrok public SSH URL
         run: |
+          sleep 5
           ngrok_url=$(curl --silent http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url)
           echo "Ngrok public SSH URL is: $ngrok_url"
           echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
-      - name: Keep the process running By Henlinux
+
+      - name: Keep the process running
         run: |
-          while true; do sleep 60; done 
+          while true; do sleep 60; done
