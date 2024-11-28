@@ -14,6 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Remove conflicting containerd package
+        run: |
+          sudo apt-get remove -y containerd
+          sudo apt-get autoremove -y
+
       - name: Install Docker
         run: |
           sudo apt-get update
@@ -29,32 +34,23 @@ jobs:
 
       - name: Run HenLinux container
         run: |
-          sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
+          sudo docker run -d --name henlinux-vps -p 22:22 henlinux
 
-      - name: Wait for container initialization
+      - name: Configure ngrok authtoken
         run: |
-          sleep 10
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok config add-authtoken YOUR_AUTHTOKEN"
 
-      - name: Check if HenLinux container is running
+      - name: Add ngrok authtoken (backup)
         run: |
-          container_status=$(sudo docker inspect -f '{{.State.Running}}' henlinux-vps || echo "false")
-          if [ "$container_status" != "true" ]; then
-            echo "HenLinux container is not running. Checking logs..."
-            sudo docker logs henlinux-vps
-            exit 1
-          fi
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken YOUR_AUTHTOKEN"
 
-      - name: Debug Container Logs
+      - name: Start ngrok for SSH
         run: |
-          sudo docker logs henlinux-vps
+          sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 22"
 
-      - name: Save Ngrok authtoken and Start Tunnel
+      - name: Get ngrok public SSH URL
         run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken 2pR0fPCjO8MUjY9RACaVS3xlrZE_6YkBEbjHxAmvvjhmRqFur && /usr/local/bin/ngrok tcp 2222"
-
-      - name: Get Ngrok public SSH URL
-        run: |
-          sleep 10
+          sleep 5
           ngrok_url=$(curl --silent http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url)
           if [ -z "$ngrok_url" ]; then
             echo "Ngrok URL is empty. Checking ngrok logs."
@@ -63,3 +59,8 @@ jobs:
           else
             echo "Ngrok public SSH URL is: $ngrok_url"
             echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
+          fi
+
+      - name: Keep the process running
+        run: |
+          while true; do sleep 60; done
