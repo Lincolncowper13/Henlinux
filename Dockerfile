@@ -2,6 +2,7 @@ FROM ubuntu:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install dependencies
 RUN apt-get update && \
     apt-get -y install \
     curl \
@@ -19,9 +20,13 @@ RUN apt-get update && \
     gnupg \
     && apt-get clean
 
-RUN curl -s https://ngrok.com/download | tar -xzv && \
-    mv ngrok /usr/local/bin/ngrok
+# Install ngrok
+RUN curl -s https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -o ngrok.zip && \
+    unzip ngrok.zip && \
+    mv ngrok /usr/local/bin/ngrok && \
+    rm ngrok.zip
 
+# Create user and setup SSH
 RUN useradd -m henuser && echo "henuser:password" | chpasswd && \
     usermod -aG sudo henuser
 
