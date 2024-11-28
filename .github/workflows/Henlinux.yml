@@ -36,6 +36,11 @@ jobs:
         run: |
           sudo docker run -d --name henlinux-vps -P henlinux
 
+      - name: Check HenLinux container status
+        run: |
+          sudo docker ps -a
+          sudo docker logs henlinux-vps
+
       - name: Get SSH Port
         run: |
           ssh_port=$(sudo docker inspect henlinux-vps --format='{{ (index (index .NetworkSettings.Ports "22/tcp") 0).HostPort }}')
