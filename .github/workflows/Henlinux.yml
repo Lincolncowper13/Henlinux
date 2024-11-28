@@ -23,13 +23,23 @@ jobs:
       - name: Create Base HenLinux Image
         run: |
           mkdir -p henlinux-image
-          sudo debootstrap --no-merged-usr --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
+          sudo debootstrap --no-merged-usr --exclude=systemd --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
 
       - name: Fix Package Configuration in Chroot
         run: |
           sudo chroot henlinux-image /bin/bash -c "
-          apt-get update && apt-get install -f -y
+          apt-get update
+          apt-get install -f -y
           dpkg --configure -a || true
+          apt-get install systemd -y || true
+          "
+
+      - name: Force Install Systemd and Dependencies
+        run: |
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get update
+          dpkg --force-depends --install /var/cache/apt/archives/*.deb || true
+          apt-get install -f -y
           "
 
       - name: Check Debootstrap Logs
