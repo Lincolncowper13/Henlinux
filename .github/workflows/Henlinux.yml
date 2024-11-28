@@ -34,11 +34,17 @@ jobs:
 
       - name: Run HenLinux container
         run: |
-          sudo docker run -d --name henlinux-vps -p 22:22 henlinux
+          sudo docker run -d --name henlinux-vps -P henlinux
+
+      - name: Get SSH Port
+        run: |
+          ssh_port=$(sudo docker inspect henlinux-vps --format='{{ (index (index .NetworkSettings.Ports "22/tcp") 0).HostPort }}')
+          echo "SSH port on host: $ssh_port"
+          echo "ssh_port=$ssh_port" >> $GITHUB_ENV
 
       - name: Start Ngrok for SSH Access with Authentication
         run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} && /usr/local/bin/ngrok tcp 22"
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} && /usr/local/bin/ngrok tcp ${{ env.ssh_port }}"
 
       - name: Wait for Ngrok to establish the tunnel
         run: |
