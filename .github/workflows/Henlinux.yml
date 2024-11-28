@@ -11,14 +11,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout the code from the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Remove conflicting containerd package
       - name: Remove conflicting containerd package
         run: |
           sudo apt-get remove -y containerd
           sudo apt-get autoremove -y
 
+      # Install Docker
       - name: Install Docker
         run: |
           sudo apt-get update
@@ -28,18 +31,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
+      # Build the HenLinux Docker image
       - name: Build HenLinux image
         run: |
           sudo docker build -t henlinux .
 
+      # Run HenLinux container and expose port 2222 (for SSH)
       - name: Run HenLinux container
         run: |
-          sudo docker run -d --name henlinux-vps -p 22:22 henlinux
+          sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
 
+      # Start Ngrok for SSH Access
       - name: Start Ngrok for SSH Access
         run: |
-          sudo docker exec -d henlinux-vps /usr/local/bin/ngrok tcp 22
+          sudo docker exec -d henlinux-vps /usr/local/bin/ngrok tcp 2222
 
+      # Get Ngrok public SSH URL
       - name: Get Ngrok public SSH URL
         run: |
           sleep 5
@@ -47,6 +54,7 @@ jobs:
           echo "Ngrok public SSH URL is: $ngrok_url"
           echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
 
+      # Keep the process running
       - name: Keep the process running
         run: |
           while true; do sleep 60; done
