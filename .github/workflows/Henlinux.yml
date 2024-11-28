@@ -46,13 +46,22 @@ jobs:
         run: |
           sudo docker exec -d henlinux-vps /usr/local/bin/ngrok tcp 2222
 
+      # Wait for Ngrok to establish the tunnel (increase sleep time)
+      - name: Wait for Ngrok to establish the tunnel
+        run: |
+          sleep 15  # Increase wait time to give Ngrok more time to start
+
       # Get Ngrok public SSH URL
       - name: Get Ngrok public SSH URL
         run: |
-          sleep 5
           ngrok_url=$(curl --silent http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url)
-          echo "Ngrok public SSH URL is: $ngrok_url"
-          echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
+          if [ -z "$ngrok_url" ]; then
+            echo "Ngrok URL is empty. Checking ngrok logs."
+            sudo docker logs henlinux-vps
+          else
+            echo "Ngrok public SSH URL is: $ngrok_url"
+            echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
+          fi
 
       # Keep the process running
       - name: Keep the process running
