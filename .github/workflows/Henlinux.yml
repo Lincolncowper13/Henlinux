@@ -34,7 +34,7 @@ jobs:
 
       - name: Run HenLinux container
         run: |
-          sudo docker run -d --name henlinux-vps -p 22:22 henlinux
+          sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
 
       - name: Configure ngrok authtoken
         run: |
