@@ -38,7 +38,7 @@ jobs:
 
       - name: Configure ngrok authtoken
         run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok config add-authtoken YOUR_AUTHTOKEN"
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok config add-authtoken 2pR0fPCjO8MUjY9RACaVS3xlrZE_6YkBEbjHxAmvvjhmRqFur"
 
       - name: Add ngrok authtoken (backup)
         run: |
