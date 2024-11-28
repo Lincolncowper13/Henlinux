@@ -27,11 +27,12 @@ RUN curl -s https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -o
     rm ngrok.zip
 
 # Create user and setup SSH
-RUN useradd -m henuser && echo "henuser:password" | chpasswd && \
+RUN useradd -m henuser && echo "henuser:Henlinux" | chpasswd && \
     usermod -aG sudo henuser
 
-RUN echo "HOSTNAME=henlinux.local" >> /etc/hostname && \
-    hostnamectl set-hostname henlinux.local
+# Set hostname by editing /etc/hostname and /etc/hosts
+RUN echo "henlinux.local" > /etc/hostname && \
+    echo "127.0.0.1   henlinux.local" >> /etc/hosts
 
 RUN echo "henuser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/henuser
 
