@@ -11,17 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code from the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Remove conflicting containerd package
       - name: Remove conflicting containerd package
         run: |
           sudo apt-get remove -y containerd
           sudo apt-get autoremove -y
 
-      # Install Docker
       - name: Install Docker
         run: |
           sudo apt-get update
@@ -31,27 +28,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
-      # Build the HenLinux Docker image
       - name: Build HenLinux image
         run: |
           sudo docker build -t henlinux .
 
-      # Run HenLinux container and expose port 2222 (for SSH)
       - name: Run HenLinux container
         run: |
-          sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
+          sudo docker run -d --name henlinux-vps -p 22:22 henlinux
 
-      # Start Ngrok for SSH Access and authenticate with the authtoken
       - name: Start Ngrok for SSH Access with Authentication
         run: |
-          sudo docker exec -d henlinux-vps bash -c "echo ${{ secrets.NGROK_AUTH_TOKEN }} | /usr/local/bin/ngrok authtoken && /usr/local/bin/ngrok tcp 2222"
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} && /usr/local/bin/ngrok tcp 22"
 
-      # Wait for Ngrok to establish the tunnel (increase sleep time)
       - name: Wait for Ngrok to establish the tunnel
         run: |
-          sleep 15  # Increase wait time to give Ngrok more time to start
+          sleep 15
 
-      # Get Ngrok public SSH URL
       - name: Get Ngrok public SSH URL
         run: |
           ngrok_url=$(curl --silent http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url)
@@ -63,7 +55,6 @@ jobs:
             echo "ngrok_url=$ngrok_url" >> $GITHUB_ENV
           fi
 
-      # Keep the process running
       - name: Keep the process running
         run: |
           while true; do sleep 60; done
