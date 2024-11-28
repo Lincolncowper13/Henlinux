@@ -41,10 +41,10 @@ jobs:
         run: |
           sudo docker run -d --name henlinux-vps -p 2222:22 henlinux
 
-      # Start Ngrok for SSH Access
-      - name: Start Ngrok for SSH Access
+      # Start Ngrok for SSH Access and authenticate with the authtoken
+      - name: Start Ngrok for SSH Access with Authentication
         run: |
-          sudo docker exec -d henlinux-vps /usr/local/bin/ngrok tcp 2222
+          sudo docker exec -d henlinux-vps bash -c "echo ${{ secrets.NGROK_AUTH_TOKEN }} | /usr/local/bin/ngrok authtoken && /usr/local/bin/ngrok tcp 2222"
 
       # Wait for Ngrok to establish the tunnel (increase sleep time)
       - name: Wait for Ngrok to establish the tunnel
