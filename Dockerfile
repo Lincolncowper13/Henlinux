@@ -30,9 +30,8 @@ RUN curl -s https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -o
 RUN useradd -m henuser && echo "henuser:Henlinux" | chpasswd && \
     usermod -aG sudo henuser
 
-# Set hostname by editing /etc/hostname and /etc/hosts
-RUN echo "henlinux.local" > /etc/hostname && \
-    echo "127.0.0.1   henlinux.local" >> /etc/hosts
+# Set hostname in entrypoint to avoid "read-only" error
+ENV HOSTNAME=henlinux.local
 
 RUN echo "henuser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/henuser
 
@@ -41,4 +40,4 @@ RUN apt-get -y install openssh-server && \
 
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D"]
+CMD ["bash", "-c", "echo $HOSTNAME > /etc/hostname && exec /usr/sbin/sshd -D"]
