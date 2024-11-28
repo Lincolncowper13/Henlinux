@@ -14,6 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Add swap memory
+        run: |
+          sudo fallocate -l 2G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Install Docker
         run: |
           sudo apt-get update
@@ -40,13 +48,13 @@ jobs:
             exit 1
           fi
 
-      - name: Debug container logs
+      - name: Save Ngrok authtoken
         run: |
-          sudo docker logs henlinux-vps || echo "No logs available"
+          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}"
 
-      - name: Start Ngrok for SSH Access with Authentication
+      - name: Start Ngrok TCP tunnel
         run: |
-          sudo docker exec henlinux-vps bash -c "/usr/local/bin/ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }} && /usr/local/bin/ngrok tcp 22"
+          sudo docker exec -d henlinux-vps bash -c "/usr/local/bin/ngrok tcp 22"
 
       - name: Wait for Ngrok to establish the tunnel
         run: |
