@@ -5,15 +5,19 @@ FROM debian:bullseye-slim
 RUN curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/bullseye.gpg | tee /etc/apt/trusted.gpg.d/tailscale.asc
 RUN echo "deb https://pkgs.tailscale.com/stable/ubuntu bullseye main" | tee /etc/apt/sources.list.d/tailscale.list
 
-# Memperbarui repositori dan menginstal paket yang diperlukan
-RUN apt-get update && apt-get install -y \
-    openssh-server \
-    curl \
-    gnupg \
-    lsb-release \
-    ca-certificates \
-    tailscale \
-    && apt-get clean
+# Memperbarui repositori
+RUN apt-get update
+
+# Instal paket yang diperlukan satu per satu untuk debugging
+RUN apt-get install -y openssh-server
+RUN apt-get install -y curl
+RUN apt-get install -y gnupg
+RUN apt-get install -y lsb-release
+RUN apt-get install -y ca-certificates
+RUN apt-get install -y tailscale
+
+# Bersihkan cache apt
+RUN apt-get clean
 
 # Menambahkan konfigurasi SSH untuk akses root
 RUN mkdir /var/run/sshd
