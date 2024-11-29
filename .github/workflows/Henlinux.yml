@@ -18,7 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            binfmt-support qemu qemu-user-static debootstrap systemd-container
+            binfmt-support qemu qemu-user-static debootstrap systemd-container curl gnupg
 
       - name: Create Base HenLinux Image
         run: |
@@ -30,25 +30,11 @@ jobs:
         run: |
           cat henlinux-image/debootstrap/debootstrap.log
 
-      - name: Force Install Packages in Chroot
+      - name: Install Systemd and SSH in Chroot
         run: |
           sudo chroot henlinux-image /bin/bash -c "
           apt-get update
-          dpkg --force-depends --install /var/cache/apt/archives/*.deb || true
-          apt-get install -f -y
-          "
-
-      - name: Install Systemd in Chroot
-        run: |
-          sudo chroot henlinux-image /bin/bash -c "
-          apt-get update
-          apt-get install -y systemd
-          "
-
-      - name: Configure OpenSSH with Root Access
-        run: |
-          sudo chroot henlinux-image /bin/bash -c "
-          apt-get update && apt-get install -y openssh-server
+          apt-get install -y systemd openssh-server
           mkdir -p /var/run/sshd
           echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
           echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
@@ -56,12 +42,12 @@ jobs:
           systemctl enable ssh
           "
 
-      - name: Install and Configure Tailscale
+      - name: Install Tailscale in Chroot
         env:
           TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         run: |
           sudo chroot henlinux-image /bin/bash -c "
-          apt-get update && apt-get install -y curl gnupg
+          apt-get update
           curl -fsSL https://tailscale.com/install.sh | sh
           tailscaled &
           tailscale up --auth-key ${TAILSCALE_AUTHKEY}
