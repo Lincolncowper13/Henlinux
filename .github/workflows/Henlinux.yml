@@ -23,14 +23,14 @@ jobs:
       - name: Create Base HenLinux Image
         run: |
           mkdir -p henlinux-image
-          sudo debootstrap --no-merged-usr --exclude=systemd,udev --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
+          sudo debootstrap --no-merged-usr --exclude=systemd --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
 
       - name: Check Debootstrap Logs
         if: failure()
         run: |
           cat henlinux-image/debootstrap/debootstrap.log
 
-      - name: Install Missing Packages in Chroot
+      - name: Force Install Packages in Chroot
         run: |
           sudo chroot henlinux-image /bin/bash -c "
           apt-get update
