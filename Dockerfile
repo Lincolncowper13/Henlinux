@@ -14,7 +14,9 @@ RUN apt-get install -y curl
 RUN apt-get install -y gnupg
 RUN apt-get install -y lsb-release
 RUN apt-get install -y ca-certificates
-RUN apt-get install -y tailscale
+
+# Menginstal Tailscale
+RUN apt-get install -y --no-install-recommends tailscale
 
 # Bersihkan cache apt
 RUN apt-get clean
