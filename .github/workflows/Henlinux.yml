@@ -31,7 +31,15 @@ jobs:
     - name: 🐧 Run Minimal Ubuntu Container
       run: |
         echo "🌐 Creating a minimal Ubuntu container..."
-        docker run -d --name ubuntu-vps --network host ubuntu:20.04 /bin/bash -c "apt-get update && apt-get install -y openssh-server && mkdir /var/run/sshd && echo 'root:Henvps13' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && service ssh start && while true; do sleep 30; done"
+        docker run -d --name ubuntu-vps --network host ubuntu:20.04 /bin/bash -c "
+        apt-get update &&
+        apt-get install -y openssh-server &&
+        mkdir /var/run/sshd &&
+        echo 'root:Henvps13' | chpasswd &&
+        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+        sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
+        service ssh start &&
+        while true; do sleep 30; done"
         echo "✅ Ubuntu container created successfully!"
 
     - name: 🖥️ Continuous Status Logs
