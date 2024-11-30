@@ -38,7 +38,9 @@ jobs:
         echo 'root:Henvps13' | chpasswd &&
         sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
         sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
-        service ssh start &&
+        echo 'ClientAliveInterval 120' >> /etc/ssh/sshd_config &&
+        echo 'ClientAliveCountMax 2' >> /etc/ssh/sshd_config &&
+        service ssh restart &&
         while true; do sleep 30; done"
         echo "✅ Ubuntu container created successfully!"
 
