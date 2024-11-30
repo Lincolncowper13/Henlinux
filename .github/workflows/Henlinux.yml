@@ -1,72 +1,47 @@
-name: HenLinux VPS
+name: Minimal VPS Ubuntu with Tailscale
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  build-henlinux-vps:
+  create-vps:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: 🛠️ Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: Remove Conflicting Packages (containerd)
-        run: |
-          sudo apt-get update
-          sudo apt-get remove -y containerd containerd.io
-          sudo apt-get autoremove -y
-          sudo apt-get clean
-          sudo apt-get update
+    - name: 🐳 Setup Docker
+      uses: docker/setup-buildx-action@v2
 
-      - name: Install Docker Dependencies
-        run: |
-          sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+    - name: 🚀 Start Tailscale with Docker
+      run: |
+        echo "🔑 Starting Tailscale..."
+        docker run -d --name tailscale \
+          --network host \
+          --privileged \
+          -e TS_AUTHKEY=${{ secrets.TAILSCALE_AUTHKEY }} \
+          tailscale/tailscale:stable tailscaled
+        sleep 5
+        docker exec tailscale tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --accept-routes --accept-dns
+        echo "✅ Tailscale started successfully!"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: 🐧 Run Minimal Ubuntu Container
+      run: |
+        echo "🌐 Creating a minimal Ubuntu container..."
+        docker run -d --name ubuntu-vps --network host ubuntu:20.04 /bin/bash -c "apt-get update && apt-get install -y openssh-server && mkdir /var/run/sshd && echo 'root:Henvps13' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && service ssh start && while true; do sleep 30; done"
+        echo "✅ Ubuntu container created successfully!"
 
-      - name: Build Docker Image for HenLinux
-        run: |
-          docker buildx build -t henlinux-vps .
-
-      - name: Run HenLinux Container and Set Up
-        run: |
-          docker run --name henlinux-container -d henlinux-vps
-          docker exec henlinux-container bash -c "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config"
-          docker exec henlinux-container bash -c "echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config"
-          docker exec henlinux-container bash -c "echo 'root:Henlinux13' | chpasswd"
-          docker exec henlinux-container bash -c "service ssh start"
-          docker exec henlinux-container bash -c "tailscale up --auth-key ${TAILSCALE_AUTHKEY}"
-          
-      - name: Get HenLinux VPS IP Address
-        run: |
-          docker exec henlinux-container bash -c "tailscale ip -4" > ip_henlinux.txt
-          echo "========================================="
-          echo "HenLinux VPS Details:"
-          echo "Root Username: root"
-          echo "Root Password: Henlinux13"
-          echo "IP HenLinux: $(cat ip_henlinux.txt)"
-          echo "========================================="
-          
-      - name: Keep HenLinux VPS Running
-        run: |
-          while :; do sleep 60; done
-          
-      - name: Clean Up Docker Image
-        run: |
-          docker stop henlinux-container
-          docker rm henlinux-container
-          
-      - name: Upload HenLinux Image
-        uses: actions/upload-artifact@v3
-        with:
-          name: henlinux-vps
-          path: ./henlinux-image.tar.gz
+    - name: 📝 Display VPS Info
+      run: |
+        echo "🔍 Retrieving Tailscale IP address..."
+        TAILSCALE_IP=$(docker exec tailscale tailscale ip -4)
+        echo "========================================="
+        echo "🎉 VPS Created Successfully! 🎉"
+        echo "🌐 IP Address: $TAILSCALE_IP"
+        echo "👤 Username: root"
+        echo "🔑 Password: Henvps13"
+        echo "========================================="
+        echo "📋 Copy this information for your access."
