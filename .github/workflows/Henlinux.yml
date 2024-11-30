@@ -1,4 +1,4 @@
-name: Minimal VPS Ubuntu with Tailscale
+name: Minimal VPS Ubuntu with
 
 on:
   push:
