@@ -1,4 +1,4 @@
-name: Minimal VPS Ubuntu with
+name: Minimal VPS Ubuntu with Tailscale
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
         docker run -d --name ubuntu-vps --network host ubuntu:20.04 /bin/bash -c "apt-get update && apt-get install -y openssh-server && mkdir /var/run/sshd && echo 'root:Henvps13' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && service ssh start && while true; do sleep 30; done"
         echo "✅ Ubuntu container created successfully!"
 
-    - name: 📝 Display VPS Info
+    - name: 🖥️ Continuous Status Logs
       run: |
         echo "🔍 Retrieving Tailscale IP address..."
         TAILSCALE_IP=$(docker exec tailscale tailscale ip -4)
@@ -44,4 +44,10 @@ jobs:
         echo "👤 Username: root"
         echo "🔑 Password: Henvps13"
         echo "========================================="
-        echo "📋 Copy this information for your access."
+        while true; do
+          echo "========================================="
+          echo "🟢 VPS STATUS"
+          echo "💻 VPS BY HEN ACTIVE"
+          echo "========================================="
+          sleep 60
+        done
