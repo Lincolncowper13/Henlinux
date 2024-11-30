@@ -1,63 +1,86 @@
-name: Minimal VPS Ubuntu with Tailscale
+name: HenLinux VPS
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  create-vps:
+  build-henlinux-vps:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 🛠️ Checkout Repository
-      uses: actions/checkout@v3
+      # Checkout repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: 🐳 Setup Docker
-      uses: docker/setup-buildx-action@v2
+      # Setup dependencies
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debootstrap qemu-utils systemd-container
 
-    - name: 🚀 Start Tailscale with Docker
-      run: |
-        echo "🔑 Starting Tailscale..."
-        docker run -d --name tailscale \
-          --network host \
-          --privileged \
-          -e TS_AUTHKEY=${{ secrets.TAILSCALE_AUTHKEY }} \
-          tailscale/tailscale:stable tailscaled
-        sleep 5
-        docker exec tailscale tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }} --accept-routes --accept-dns
-        echo "✅ Tailscale started successfully!"
+      # Create the base HenLinux image
+      - name: Create Base HenLinux Image
+        run: |
+          mkdir -p henlinux-image
+          sudo debootstrap --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
 
-    - name: 🐧 Run Minimal Ubuntu Container
-      run: |
-        echo "🌐 Creating a minimal Ubuntu container..."
-        docker run -d --name ubuntu-vps --network host ubuntu:20.04 /bin/bash -c "
-        apt-get update &&
-        apt-get install -y openssh-server &&
-        mkdir /var/run/sshd &&
-        echo 'root:Pabedilan2024' | chpasswd &&
-        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
-        sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
-        echo 'ClientAliveInterval 120' >> /etc/ssh/sshd_config &&
-        echo 'ClientAliveCountMax 2' >> /etc/ssh/sshd_config &&
-        service ssh restart &&
-        while true; do sleep 30; done"
-        echo "✅ Ubuntu container created successfully!"
+      # Configure SSH Server with Root Access
+      - name: Install and Configure OpenSSH with Root Access
+        run: |
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get update && apt-get install -y openssh-server
+          mkdir -p /var/run/sshd
+          echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
+          echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+          echo 'root:Henlinux13' | chpasswd
+          systemctl enable ssh
+          "
 
-    - name: 🖥️ Continuous Status Logs
-      run: |
-        echo "🔍 Retrieving Tailscale IP address..."
-        TAILSCALE_IP=$(docker exec tailscale tailscale ip -4)
-        echo "========================================="
-        echo "🎉 VPS Created Successfully! 🎉"
-        echo "🌐 IP Address: $TAILSCALE_IP"
-        echo "👤 Username: root"
-        echo "🔑 Password: Pabedilan2024"
-        echo "========================================="
-        while true; do
+      # Install and configure Tailscale using GitHub Secrets
+      - name: Install and Configure Tailscale
+        env:
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+        run: |
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get update && apt-get install -y curl gnupg
+          curl -fsSL https://tailscale.com/install.sh | sh
+          tailscaled &
+          tailscale up --auth-key ${TAILSCALE_AUTHKEY}
+          tailscale ip -4 > /tmp/ip_henlinux.txt
+          "
+
+      # Display Login Credentials and Keep HenLinux Active
+      - name: Display Login Credentials and Keep Active
+        run: |
+          sudo chroot henlinux-image /bin/bash -c "cat /tmp/ip_henlinux.txt" > ip_henlinux.txt
           echo "========================================="
-          echo "🟢 VPS STATUS"
-          echo "💻 VPS BY HEN ACTIVE"
+          echo "HenLinux VPS Details:"
+          echo "Root Username: root"
+          echo "Root Password: Henlinux13"
+          echo "IP HenLinux: $(cat ip_henlinux.txt)"
           echo "========================================="
-          sleep 60
-        done
+          echo "HenLinux Active"
+          while :; do sleep 60; done
+
+      # Clean up the image for packaging
+      - name: Clean Up Image
+        run: |
+          sudo chroot henlinux-image /bin/bash -c "
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+          "
+
+      # Package the image into a compressed file
+      - name: Package HenLinux Image
+        run: |
+          sudo tar -czvf henlinux-image.tar.gz -C henlinux-image .
+
+      # Upload the built image as an artifact
+      - name: Upload HenLinux Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: henlinux-vps
+          path: henlinux-image.tar.gz
