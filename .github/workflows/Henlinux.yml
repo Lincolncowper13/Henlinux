@@ -1,4 +1,4 @@
-name: Setup Ubuntu with Tailscale and Root Login
+name: VPS Setup with Tailscale and Auto Log
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Install Tailscale
         run: |
           curl -fsSL https://tailscale.com/install.sh | sh
-
+          
       - name: Enable and Start Tailscale
         run: |
           sudo systemctl enable tailscaled
@@ -26,28 +26,34 @@ jobs:
         run: |
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }}
 
-      - name: Allow Root Login
+      - name: Allow root login
         run: |
-          # Membuka root login SSH
           sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
           sudo systemctl restart sshd
 
       - name: Set Root Password
         run: |
-          echo "root:HenFreetrial" | sudo chpasswd
+          echo "root:${{ secrets.ROOT_PASSWORD }}" | sudo chpasswd
 
       - name: Restart SSH service
         run: |
           sudo systemctl restart sshd
 
-      - name: Show Tailscale Status
+      - name: Install required packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cron
+
+      - name: Create and start status logging script
+        run: |
+          echo '#!/bin/bash' > /root/vps_status.sh
+          echo 'while true; do' >> /root/vps_status.sh
+          echo '    echo "$(date) - VPS Active" >> /root/vps_status.log' >> /root/vps_status.sh
+          echo '    sleep 600' >> /root/vps_status.sh
+          echo 'done' >> /root/vps_status.sh
+          sudo chmod +x /root/vps_status.sh
+          sudo nohup /root/vps_status.sh &
+
+      - name: Show Tailscale status
         run: |
           sudo tailscale status
-
-      - name: Install UFW and Open SSH Port
-        run: |
-          sudo apt update
-          sudo apt install -y ufw
-          sudo ufw allow 22/tcp
-          sudo ufw enable
-          sudo ufw status
