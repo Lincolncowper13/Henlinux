@@ -22,14 +22,11 @@ jobs:
           sudo systemctl enable tailscaled
           sudo systemctl start tailscaled
 
-      - name: Authenticate with Tailscale
+      - name: Configure SSH for Root Login and Password Authentication
         run: |
-          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }}
-
-      - name: Allow Root Login via SSH
-        run: |
-          sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo systemctl restart sshd
 
       - name: Set Root Password
