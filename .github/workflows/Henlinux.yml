@@ -1,4 +1,4 @@
-name: HenVps
+name: VPS Setup with Tailscale and Infinite Workflow
 
 on:
   push:
@@ -48,28 +48,22 @@ jobs:
           echo "Tailscale IP: $(sudo tailscale ip)"
           echo "================================="
 
-      - name: Remove default MOTD
+      - name: Set Hostname to HenVps
         run: |
-          sudo chmod -x /etc/update-motd.d/*
-          sudo rm -rf /etc/update-motd.d/*
+          sudo hostnamectl set-hostname HenVps
 
-      - name: Set custom MOTD
+      - name: Remove default MOTD and set custom MOTD
         run: |
-          echo "Welcome to HenVps 22.04.5 LTS" | sudo tee /etc/motd
+          # Remove the default MOTD
+          sudo rm -rf /etc/motd /etc/update-motd.d/*
+
+          # Set the custom MOTD
+          echo "Welcome to HenVps 01.00 LTS" | sudo tee /etc/motd
           echo "" | sudo tee -a /etc/motd
-          echo " * Support:        https://help.hendramods.uk" | sudo tee -a /etc/motd
+          echo " Peringatan:" | sudo tee -a /etc/motd
+          echo " Mohon Untuk Tidak Di Pakai untuk Mining, Hacking, Spamming, atau Tindakan Ilegal lainnya!" | sudo tee -a /etc/motd
           echo "" | sudo tee -a /etc/motd
-          echo " Informasi sistem per $(date)" | sudo tee -a /etc/motd
-          echo "" | sudo tee -a /etc/motd
-          echo " System load: $(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}')" | sudo tee -a /etc/motd
-          echo " Processes: $(ps aux | wc -l)" | sudo tee -a /etc/motd
-          echo " Usage of /: $(df -h | grep '^/dev' | awk '{print $5}')" | sudo tee -a /etc/motd
-          echo " Users logged in: $(who | wc -l)" | sudo tee -a /etc/motd
-          echo " Memory usage: $(free -h | grep Mem | awk '{print $3}') / $(free -h | grep Mem | awk '{print $2}')" | sudo tee -a /etc/motd
-          echo " IPv4 address for eth0: $(hostname -I | awk '{print $1}')" | sudo tee -a /etc/motd
-          echo " Swap usage: $(free -h | grep Swap | awk '{print $3}') / $(free -h | grep Swap | awk '{print $2}')" | sudo tee -a /etc/motd
-          echo "" | sudo tee -a /etc/motd
-          echo " Mohon Untuk Tidak Mining Dll Menggunakan Vps Ini" | sudo tee -a /etc/motd
+          echo "=================================" | sudo tee -a /etc/motd
           echo "" | sudo tee -a /etc/motd
 
       - name: Infinite Loop for VPS Active Status
