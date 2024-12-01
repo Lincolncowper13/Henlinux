@@ -42,3 +42,13 @@ jobs:
       - name: Show Tailscale status
         run: |
           sudo tailscale status
+
+      - name: Keep process running and show "HenVps Active" every 10 minutes for 1000 days
+        run: |
+          # Menghitung durasi dalam detik untuk 1000 hari
+          MAX_DURATION=$((1000 * 24 * 60 * 60))
+          END_TIME=$((SECONDS + MAX_DURATION))
+          while [ $SECONDS -lt $END_TIME ]; do
+            echo "HenVps Active"
+            sleep 600  # tidur selama 10 menit (600 detik)
+          done
