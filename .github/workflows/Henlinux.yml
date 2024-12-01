@@ -1,4 +1,4 @@
-name: VPS Setup with Tailscale and Persistent Log
+name: VPS Setup with Tailscale and Auto Log
 
 on:
   push:
@@ -26,47 +26,44 @@ jobs:
         run: |
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }}
 
-      - name: Allow root login
+      - name: Allow Root Login via SSH
         run: |
           sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo systemctl restart sshd
 
       - name: Set Root Password
         run: |
-          echo "root:${{ secrets.ROOT_PASSWORD }}" | sudo chpasswd
+          echo "root:HenFreetrial" | sudo chpasswd
 
-      - name: Restart SSH service
+      - name: Display Login Information
         run: |
-          sudo systemctl restart sshd
+          echo "================================="
+          echo "Login Information:"
+          echo "Username: root"
+          echo "Password: HenFreetrial"
+          echo "Public IP: $(curl -s ifconfig.me)"
+          echo "================================="
 
-      - name: Install required packages
+      - name: Install Required Packages
         run: |
           sudo apt-get update
           sudo apt-get install -y cron
 
-      - name: Display Login Info
+      - name: Create and Start Status Logging Script
         run: |
-          PUBLIC_IP=$(curl -s ifconfig.me)
-          echo "================================="
-          echo "Login Info for VPS:"
-          echo "Username: root"
-          echo "Password: ${{ secrets.ROOT_PASSWORD }}"
-          echo "IP Address: $PUBLIC_IP"
-          echo "================================="
-
-      - name: Create and start persistent status script
-        run: |
-          echo '#!/bin/bash' | sudo tee /root/vps_status.sh
-          echo 'while true; do' | sudo tee -a /root/vps_status.sh
-          echo '    echo "$(date) - VPS Active"' | sudo tee -a /root/vps_status.log
-          echo '    sleep 10' | sudo tee -a /root/vps_status.sh
-          echo 'done' | sudo tee -a /root/vps_status.sh
+          echo '#!/bin/bash' > /root/vps_status.sh
+          echo 'while true; do' >> /root/vps_status.sh
+          echo '    echo "$(date) - VPS Active" >> /root/vps_status.log' >> /root/vps_status.sh
+          echo '    echo "VPS Active"' >> /root/vps_status.sh
+          echo '    sleep 10' >> /root/vps_status.sh
+          echo 'done' >> /root/vps_status.sh
           sudo chmod +x /root/vps_status.sh
-          sudo nohup bash -c "/root/vps_status.sh &> /dev/null &"
+          sudo nohup /root/vps_status.sh >/dev/null 2>&1 &
 
-      - name: Continuous Logging
+      - name: Keep Workflow Active
         run: |
+          echo "Running indefinitely. Use Ctrl+C to stop."
           while true; do
-            echo "VPS Active"
-            sleep 10
+            sleep 600
           done
