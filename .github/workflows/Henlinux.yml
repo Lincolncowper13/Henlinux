@@ -39,6 +39,21 @@ jobs:
         run: |
           echo "root:HenFreetrial" | sudo chpasswd
 
+      - name: Set Hostname to HenVPS
+        run: |
+          sudo hostnamectl set-hostname HenVPS
+          echo "Hostname set to: HenVPS"
+
+      - name: Customize Login Message
+        run: |
+          echo "Selamat Datang di HenVPS" | sudo tee /etc/motd > /dev/null
+          echo "" | sudo tee -a /etc/motd > /dev/null
+          echo "Sistem Informasi:" | sudo tee -a /etc/motd > /dev/null
+          echo "---------------------------------" | sudo tee -a /etc/motd > /dev/null
+          echo "$(df -h)" | sudo tee -a /etc/motd > /dev/null
+          echo "" | sudo tee -a /etc/motd > /dev/null
+          echo "Selamat Memakai HenVPS" | sudo tee -a /etc/motd > /dev/null
+
       - name: Display Login Information
         run: |
           echo "================================="
