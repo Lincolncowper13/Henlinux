@@ -16,7 +16,7 @@ jobs:
       - name: Install Tailscale
         run: |
           curl -fsSL https://tailscale.com/install.sh | sh
-          
+
       - name: Enable and Start Tailscale
         run: |
           sudo systemctl enable tailscaled
@@ -46,13 +46,17 @@ jobs:
 
       - name: Create and start status logging script
         run: |
-          echo '#!/bin/bash' > /root/vps_status.sh
-          echo 'while true; do' >> /root/vps_status.sh
-          echo '    echo "$(date) - VPS Active" >> /root/vps_status.log' >> /root/vps_status.sh
-          echo '    sleep 600' >> /root/vps_status.sh
-          echo 'done' >> /root/vps_status.sh
+          echo '#!/bin/bash' | sudo tee /root/vps_status.sh
+          echo 'while true; do' | sudo tee -a /root/vps_status.sh
+          echo '    echo "$(date) - VPS Active" >> /root/vps_status.log' | sudo tee -a /root/vps_status.sh
+          echo '    sleep 600' | sudo tee -a /root/vps_status.sh
+          echo 'done' | sudo tee -a /root/vps_status.sh
           sudo chmod +x /root/vps_status.sh
           sudo nohup /root/vps_status.sh &
+
+      - name: Verify VPS Log Script
+        run: |
+          tail -n 5 /root/vps_status.log || echo "Log file not created yet."
 
       - name: Show Tailscale status
         run: |
