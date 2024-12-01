@@ -1,86 +1,44 @@
-name: HenLinux VPS
+name: Ubuntu Setup with Tailscale
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  build-henlinux-vps:
+  setup:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      # Setup dependencies
-      - name: Setup Build Environment
+      - name: Install Tailscale
         run: |
-          sudo apt-get update
-          sudo apt-get install -y debootstrap qemu-utils systemd-container
-
-      # Create the base HenLinux image
-      - name: Create Base HenLinux Image
-        run: |
-          mkdir -p henlinux-image
-          sudo debootstrap --arch=amd64 bullseye henlinux-image http://deb.debian.org/debian
-
-      # Configure SSH Server with Root Access
-      - name: Install and Configure OpenSSH with Root Access
-        run: |
-          sudo chroot henlinux-image /bin/bash -c "
-          apt-get update && apt-get install -y openssh-server
-          mkdir -p /var/run/sshd
-          echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
-          echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
-          echo 'root:Henlinux13' | chpasswd
-          systemctl enable ssh
-          "
-
-      # Install and configure Tailscale using GitHub Secrets
-      - name: Install and Configure Tailscale
-        env:
-          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
-        run: |
-          sudo chroot henlinux-image /bin/bash -c "
-          apt-get update && apt-get install -y curl gnupg
           curl -fsSL https://tailscale.com/install.sh | sh
-          tailscaled &
-          tailscale up --auth-key ${TAILSCALE_AUTHKEY}
-          tailscale ip -4 > /tmp/ip_henlinux.txt
-          "
-
-      # Display Login Credentials and Keep HenLinux Active
-      - name: Display Login Credentials and Keep Active
+          
+      - name: Enable and Start Tailscale
         run: |
-          sudo chroot henlinux-image /bin/bash -c "cat /tmp/ip_henlinux.txt" > ip_henlinux.txt
-          echo "========================================="
-          echo "HenLinux VPS Details:"
-          echo "Root Username: root"
-          echo "Root Password: Henlinux13"
-          echo "IP HenLinux: $(cat ip_henlinux.txt)"
-          echo "========================================="
-          echo "HenLinux Active"
-          while :; do sleep 60; done
+          sudo systemctl enable tailscaled
+          sudo systemctl start tailscaled
 
-      # Clean up the image for packaging
-      - name: Clean Up Image
+      - name: Authenticate with Tailscale
         run: |
-          sudo chroot henlinux-image /bin/bash -c "
-          apt-get clean
-          rm -rf /var/lib/apt/lists/*
-          "
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }}
 
-      # Package the image into a compressed file
-      - name: Package HenLinux Image
+      - name: Allow root login
         run: |
-          sudo tar -czvf henlinux-image.tar.gz -C henlinux-image .
+          sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo systemctl restart sshd
 
-      # Upload the built image as an artifact
-      - name: Upload HenLinux Image
-        uses: actions/upload-artifact@v3
-        with:
-          name: henlinux-vps
-          path: henlinux-image.tar.gz
+      - name: Set Root Password
+        run: |
+          echo "root:${{ secrets.ROOT_PASSWORD }}" | sudo chpasswd
+          
+      - name: Restart SSH service
+        run: |
+          sudo systemctl restart sshd
+
+      - name: Show Tailscale status
+        run: |
+          sudo tailscale status
