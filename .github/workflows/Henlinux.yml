@@ -1,4 +1,4 @@
-name: Ubuntu Setup with Tailscale
+name: Setup Ubuntu with Tailscale and Enable Root Login
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
           sudo systemctl restart sshd
 
-      - name: Set Root Password to HenFreetrial
+      - name: Set Root Password
         run: |
           echo "root:HenFreetrial" | sudo chpasswd
           
@@ -43,12 +43,9 @@ jobs:
         run: |
           sudo tailscale status
 
-      - name: Keep process running and show "HenVps Active" every 10 minutes for 1000 days
+      - name: Continuous output "HenVps Active"
         run: |
-          # Menghitung durasi dalam detik untuk 1000 hari
-          MAX_DURATION=$((1000 * 24 * 60 * 60))
-          END_TIME=$((SECONDS + MAX_DURATION))
-          while [ $SECONDS -lt $END_TIME ]; do
+          while true; do
             echo "HenVps Active"
-            sleep 600  # tidur selama 10 menit (600 detik)
+            sleep 600  # Sleep for 10 minutes
           done
