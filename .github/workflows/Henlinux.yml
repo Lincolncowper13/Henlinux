@@ -1,4 +1,4 @@
-name: Setup Ubuntu with Tailscale and Enable Root Login
+name: Setup Ubuntu with Tailscale and Root Login
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Install Tailscale
         run: |
           curl -fsSL https://tailscale.com/install.sh | sh
-          
+
       - name: Enable and Start Tailscale
         run: |
           sudo systemctl enable tailscaled
@@ -26,26 +26,28 @@ jobs:
         run: |
           sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }}
 
-      - name: Allow root login
+      - name: Allow Root Login
         run: |
+          # Membuka root login SSH
           sudo sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
           sudo systemctl restart sshd
 
       - name: Set Root Password
         run: |
           echo "root:HenFreetrial" | sudo chpasswd
-          
+
       - name: Restart SSH service
         run: |
           sudo systemctl restart sshd
 
-      - name: Show Tailscale status
+      - name: Show Tailscale Status
         run: |
           sudo tailscale status
 
-      - name: Continuous output "HenVps Active"
+      - name: Install UFW and Open SSH Port
         run: |
-          while true; do
-            echo "HenVps Active"
-            sleep 600  # Sleep for 10 minutes
-          done
+          sudo apt update
+          sudo apt install -y ufw
+          sudo ufw allow 22/tcp
+          sudo ufw enable
+          sudo ufw status
