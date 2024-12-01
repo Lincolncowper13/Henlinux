@@ -1,4 +1,4 @@
-name: VPS Setup with Tailscale and Infinite Workflow
+name: HenVps
 
 on:
   push:
@@ -70,6 +70,7 @@ jobs:
           echo " Swap usage: $(free -h | grep Swap | awk '{print $3}') / $(free -h | grep Swap | awk '{print $2}')" | sudo tee -a /etc/motd
           echo "" | sudo tee -a /etc/motd
           echo " Mohon Untuk Tidak Mining Dll Menggunakan Vps Ini" | sudo tee -a /etc/motd
+          echo "" | sudo tee -a /etc/motd
 
       - name: Infinite Loop for VPS Active Status
         run: |
