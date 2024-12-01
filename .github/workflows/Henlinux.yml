@@ -44,15 +44,20 @@ jobs:
           sudo hostnamectl set-hostname HenVPS
           echo "Hostname set to: HenVPS"
 
-      - name: Customize Login Message
+      - name: Customize Login Message (MOTD)
         run: |
-          echo "Selamat Datang di HenVPS" | sudo tee /etc/motd > /dev/null
+          echo "Welcome to HenVps 22.04.5 LTS" | sudo tee /etc/motd > /dev/null
           echo "" | sudo tee -a /etc/motd > /dev/null
-          echo "Sistem Informasi:" | sudo tee -a /etc/motd > /dev/null
-          echo "---------------------------------" | sudo tee -a /etc/motd > /dev/null
-          echo "$(df -h)" | sudo tee -a /etc/motd > /dev/null
+          echo " * Support:        https://help.hendramods.uk" | sudo tee -a /etc/motd > /dev/null
           echo "" | sudo tee -a /etc/motd > /dev/null
-          echo "Selamat Memakai HenVPS" | sudo tee -a /etc/motd > /dev/null
+          echo " Informasi sistem per $(date '+%A, %-d %B %H:%M:%S %Z %Y')" | sudo tee -a /etc/motd > /dev/null
+          echo "" | sudo tee -a /etc/motd > /dev/null
+          echo "  System load:  $(uptime | awk '{print $10}' | tr -d ',')               Processes:             $(ps aux | wc -l)" | sudo tee -a /etc/motd > /dev/null
+          echo "  Usage of /:   $(df -h / | awk 'NR==2 {print $5}') of $(df -h / | awk 'NR==2 {print $2}')   Users logged in:       $(who | wc -l)" | sudo tee -a /etc/motd > /dev/null
+          echo "  Memory usage: $(free -m | awk '/Mem:/ {printf "%.1f", $3/$2 * 100.0}')%                 IPv4 address for eth0: $(hostname -I | awk '{print $1}')" | sudo tee -a /etc/motd > /dev/null
+          echo "  Swap usage:   $(free -m | awk '/Swap:/ {if ($2 == 0) print "0%"; else printf "%.1f", $3/$2 * 100.0}')%" | sudo tee -a /etc/motd > /dev/null
+          echo "" | sudo tee -a /etc/motd > /dev/null
+          echo "Mohon Untuk Tidak Mining Dll Menggunakan Vps Ini" | sudo tee -a /etc/motd > /dev/null
 
       - name: Display Login Information
         run: |
