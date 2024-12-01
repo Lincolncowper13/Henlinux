@@ -22,6 +22,12 @@ jobs:
           sudo systemctl enable tailscaled
           sudo systemctl start tailscaled
 
+      - name: Authenticate with Tailscale
+        run: |
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTHKEY }}
+          echo "Tailscale IP: $(sudo tailscale ip)" > tailscale_ip.txt
+          cat tailscale_ip.txt
+
       - name: Configure SSH for Root Login and Password Authentication
         run: |
           sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
@@ -39,28 +45,5 @@ jobs:
           echo "Login Information:"
           echo "Username: root"
           echo "Password: HenFreetrial"
-          echo "Public IP: $(curl -s ifconfig.me)"
+          echo "Tailscale IP: $(sudo tailscale ip)"
           echo "================================="
-
-      - name: Install Required Packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cron
-
-      - name: Create and Start Status Logging Script
-        run: |
-          echo '#!/bin/bash' | sudo tee /tmp/vps_status.sh
-          echo 'while true; do' | sudo tee -a /tmp/vps_status.sh
-          echo '    echo "$(date) - VPS Active" >> /tmp/vps_status.log' | sudo tee -a /tmp/vps_status.sh
-          echo '    echo "VPS Active"' | sudo tee -a /tmp/vps_status.sh
-          echo '    sleep 10' | sudo tee -a /tmp/vps_status.sh
-          echo 'done' | sudo tee -a /tmp/vps_status.sh
-          sudo chmod +x /tmp/vps_status.sh
-          sudo nohup /tmp/vps_status.sh >/dev/null 2>&1 &
-
-      - name: Keep Workflow Active
-        run: |
-          echo "Running indefinitely. Use Ctrl+C to stop."
-          while true; do
-            sleep 600
-          done
