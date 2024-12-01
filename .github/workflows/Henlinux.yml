@@ -1,4 +1,4 @@
-name: VPS Setup with Tailscale and Auto Log
+name: VPS Setup with Tailscale and Infinite Workflow
 
 on:
   push:
@@ -47,3 +47,11 @@ jobs:
           echo "Password: HenFreetrial"
           echo "Tailscale IP: $(sudo tailscale ip)"
           echo "================================="
+
+      - name: Infinite Loop for VPS Active Status
+        run: |
+          echo "Starting infinite loop to keep workflow active..."
+          while true; do
+            echo "$(date) - VPS Active"
+            sleep 10
+          done
